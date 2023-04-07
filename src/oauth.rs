@@ -1,5 +1,5 @@
 use crate::error::TempomatError;
-use reqwest::{Client, StatusCode};
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 const CLIENT_ID: &str = "3dcfeda8e3aa43748cce54a61e6a3d3a";
@@ -94,7 +94,78 @@ impl AccessTokensFull {
 }
 
 pub mod server {
-    use axum::Server;
+    use axum::{
+        extract::{Query, State},
+        routing::get,
+        Router, Server,
+    };
+    use serde::Deserialize;
+    use std::{future::Future, net::SocketAddr, sync::Arc};
+    use tokio::{
+        sync::{oneshot, Mutex, Notify},
+        task::{self, JoinHandle},
+    };
 
-    
+    use crate::error::TempomatError;
+
+    pub struct OAuthServer {
+        handle: JoinHandle<String>,
+    }
+
+    impl OAuthServer {
+        pub async fn start(host: SocketAddr) -> Self {
+            let handle = task::spawn(async move {
+                let (tx, rx) = oneshot::channel();
+                let notify_done = Arc::new(Notify::new());
+
+                let server = Server::bind(&host).serve(
+                    Router::new()
+                        .route("/cb", get(handler))
+                        .with_state((notify_done.clone(), Arc::new(Mutex::new(Some(tx)))))
+                        .into_make_service(),
+                );
+
+                #[derive(Deserialize)]
+                struct CBQuery {
+                    code: String,
+                }
+
+                #[axum::debug_handler]
+                async fn handler(
+                    State((notify, send)): State<(
+                        Arc<Notify>,
+                        Arc<Mutex<Option<oneshot::Sender<String>>>>,
+                    )>,
+                    Query(CBQuery { code }): Query<CBQuery>,
+                ) {
+                    if let Some(send) = send.lock_owned().await.take() {
+                        let _ = send.send(code);
+                        notify.notify_one()
+                    }
+                }
+
+                let _graceful = server
+                    .with_graceful_shutdown(async {
+                        notify_done.notified().await;
+                    })
+                    .await;
+
+                rx.await.unwrap()
+            });
+
+            Self { handle }
+        }
+    }
+
+    impl Future for OAuthServer {
+        type Output = Result<String, TempomatError>;
+
+        fn poll(
+            mut self: std::pin::Pin<&mut Self>,
+            cx: &mut std::task::Context<'_>,
+        ) -> std::task::Poll<Self::Output> {
+            <JoinHandle<String> as Future>::poll(std::pin::Pin::new(&mut self.handle), cx)
+                .map_err(Into::into)
+        }
+    }
 }

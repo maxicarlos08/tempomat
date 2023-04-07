@@ -1,3 +1,6 @@
+use serde::{Deserialize, Serialize};
+
+#[derive(Deserialize, Serialize)]
 pub struct Config {
-	instance: String,
+    pub atlassian_instance: String,
 }
