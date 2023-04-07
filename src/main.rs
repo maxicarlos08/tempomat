@@ -1,8 +1,12 @@
-use tempomat::oauth::server::OAuthServer;
+use tempomat::{config::Config, oauth::actions};
 
 #[tokio::main]
 async fn main() {
-    let result = OAuthServer::start(([127, 0, 0, 1], 3000).into()).await;
+    tracing_subscriber::fmt::init();
 
-    println!("Result: {:?}", result.await);
+    // This is only temporary
+    let _ = actions::login(&Config {
+        atlassian_instance: "volateq".to_string(),
+    })
+    .await;
 }
