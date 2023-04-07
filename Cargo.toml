@@ -1,0 +1,17 @@
+[package]
+name = "tempomat"
+description = "Minimal Tempo+Jira time tracking CLI"
+authors = ["Maxicarlos08 <maxicarlos08@gmail.com>"]
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = "0.6.12"
+clap = { version = "4.2.1", features = ["derive"] }
+reqwest = { version = "0.11.16", features = ["json"] }
+serde = { version = "1.0.159", features = ["derive"] }
+serde_json = "1.0.95"
+thiserror = "1.0.40"
+tokio = { version = "1.27.0", features = ["full"] }
