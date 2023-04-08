@@ -1,6 +1,6 @@
 use crate::{
     error::TempomatError,
-    jira,
+    jira::{self, AtlassianToken},
     tempo::oauth::{actions as tempo_actions, TempoAccessTokens},
 };
 use chrono::{Duration, NaiveDateTime, Utc};
@@ -31,7 +31,7 @@ pub struct TempoAccessMetadata {
 #[derive(Default, Deserialize, Serialize)]
 pub struct APITokens {
     /// Jira only has one access token
-    pub jira: Option<String>,
+    pub jira: Option<AtlassianToken>,
     /// OAuth tokens for tempo
     pub tempo: Option<TempoAccessMetadata>,
 }
