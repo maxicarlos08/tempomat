@@ -9,11 +9,13 @@ edition = "2021"
 
 [dependencies]
 axum = { version = "0.6.12", features = ["macros"] }
+chrono = { version = "0.4.24", features = ["serde"] }
 clap = { version = "4.2.1", features = ["derive"] }
+directories = "5.0.0"
 open = "4.0.1"
 reqwest = { version = "0.11.16", features = ["json"] }
+ron = "0.8.0"
 serde = { version = "1.0.159", features = ["derive"] }
-serde_json = "1.0.95"
 thiserror = "1.0.40"
 tokio = { version = "1.27.0", features = ["full"] }
 tracing = { version = "0.1.37", features = ["attributes"] }

@@ -8,4 +8,16 @@ pub enum TempomatError {
     OAuthRevokeFailed(reqwest::Response),
     #[error("Failed to join task (this should never happen, please report): {0:?}")]
     JoinError(#[from] tokio::task::JoinError),
+    #[error("I/O error: {0:?}")]
+    IOError(#[from] std::io::Error),
+    #[error("Missing Tempo acces codes")]
+    MissingTempoAccess,
+    #[error("Missing Jira access codes")]
+    MissingJiraAccess,
+    #[error("Could not get project directories")]
+    NoProjectDirs,
+    #[error("I'm Drunk: {0:?}")]
+    RonError(#[from] ron::Error),
+    #[error("Failed to parse RON file: {0:?}")]
+    RonParseError(#[from] ron::error::SpannedError),
 }
