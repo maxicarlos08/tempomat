@@ -118,7 +118,7 @@ pub mod actions {
         let link = generate_access_link(&config.atlassian_instance, &OAUTH_REDIRECT_URI);
         // Start the oauth process by opening the initial link in the browser
         let _ = open::that(&link);
-        println!("Opened in browser, if nothing happened click this link: {link}");
+        println!("Click \"Accept\" and then \"Onwards\" in your browser tab, if nothing happened click this link: {link}");
 
         let code = server.await?;
 
@@ -188,7 +188,7 @@ pub mod server {
                         let _ = send.send(code);
                         notify.notify_one();
 
-                        "Success! You can now clase this"
+                        "Success! You can now close this tab"
                     } else {
                         error!("Failed to get Notifier");
                         "Something went terribly wrong, leave your house immediatly"

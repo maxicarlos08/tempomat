@@ -1,21 +1,33 @@
 use clap::{Parser, Subcommand};
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct TempomatCLI {
+    /// Override configuration root path value, can also be override using $TEMPOMAT_ROOT
+    #[arg(long)]
+    pub config: Option<PathBuf>,
     #[command(subcommand)]
-    command: CLISubcommand,
+    pub command: CLISubcommand,
 }
 
 #[derive(Subcommand, Debug)]
 pub enum CLISubcommand {
+    /// Create a new time log
     Log {
-        #[arg(short, long, value_parser = parse_duration::parse_arg)]
+        /// Amount of time to log (XhYmZs)
+        #[arg(value_parser = parse_duration::parse_arg)]
         time: usize,
+        /// Message for the time log
         #[arg(short, long)]
         message: Option<String>,
+        /// Jira issue ID to log to
+        #[arg(short, long)]
+        issue_id: Option<String>,
     },
+    /// Log in to Tempo and Jira
     Login {
+        /// Name of the atlassian instance you have tempo installed to
         #[arg(long)]
         atlassian_instance: String,
     },
@@ -27,6 +39,7 @@ mod parse_duration {
         combinator::map_res,
         IResult,
     };
+
     pub fn parse_arg(time: &str) -> Result<usize, String> {
         match parse_duration(time) {
             Ok(("", duration)) => Ok(duration),

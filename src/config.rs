@@ -1,12 +1,15 @@
 use crate::{
     error::TempomatError,
     jira,
-    tempo::oauth::{actions, TempoAccessTokens},
+    tempo::oauth::{actions as tempo_actions, TempoAccessTokens},
 };
 use chrono::{Duration, NaiveDateTime, Utc};
-use directories::ProjectDirs;
+use colored::Colorize;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 use tracing::debug;
 
 const AUTH_FILENAME: &str = "auth.ron";
@@ -36,8 +39,12 @@ pub struct APITokens {
 impl APITokens {
     pub async fn initialize(config: &Config) -> Result<Self, TempomatError> {
         // Not using Result::ok() here since we want the process to fail if something went wrong
-        let tempo = Some(actions::login(config).await?.into());
+        println!("Getting Tempo tokens...");
+        let tempo = Some(tempo_actions::login(config).await?.into());
+        println!("Getting Jira tokens...");
         let jira = Some(jira::get_token()?);
+
+        println!("{}", "Successfully got access tokens!".green());
 
         Ok(Self { tempo, jira })
     }
@@ -50,7 +57,7 @@ impl APITokens {
             > Duration::seconds(tempo.tokens.expires_in as i64)
         {
             debug!("Token expired, getting new tokens...");
-            let tokens = actions::refresh_token(&tempo.tokens).await?;
+            let tokens = tempo_actions::refresh_token(&tempo.tokens).await?;
             self.tempo = Some(tokens.into());
             Ok(true)
         } else {
@@ -61,30 +68,30 @@ impl APITokens {
 }
 
 impl Saveable for APITokens {
-    fn path(dirs: &ProjectDirs) -> PathBuf {
-        dirs.config_local_dir().join(AUTH_FILENAME)
+    fn path(root: &Path) -> PathBuf {
+        root.join(AUTH_FILENAME)
     }
 }
 
 impl Saveable for Config {
-    fn path(dirs: &ProjectDirs) -> PathBuf {
-        dirs.config_local_dir().join(CONFIG_FILENAME)
+    fn path(root: &Path) -> PathBuf {
+        root.join(CONFIG_FILENAME)
     }
 }
 
-trait Saveable: Serialize + DeserializeOwned {
-    fn path(dirs: &ProjectDirs) -> PathBuf;
+pub trait Saveable: Serialize + DeserializeOwned {
+    fn path(root: &Path) -> PathBuf;
 
-    fn save(&self, dirs: &ProjectDirs) -> Result<(), TempomatError> {
-        let path = Self::path(dirs);
+    fn save(&self, root: &Path) -> Result<(), TempomatError> {
+        let path = Self::path(root);
 
         fs::write(path, ron::to_string(self)?)?;
 
         Ok(())
     }
 
-    fn try_read(dirs: &ProjectDirs) -> Result<Self, TempomatError> {
-        let path = Self::path(dirs);
+    fn try_read(root: &Path) -> Result<Self, TempomatError> {
+        let path = Self::path(root);
         let config = fs::read_to_string(path)?;
         let config = ron::from_str(&config)?;
 

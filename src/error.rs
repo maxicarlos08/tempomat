@@ -20,4 +20,6 @@ pub enum TempomatError {
     RonError(#[from] ron::Error),
     #[error("Failed to parse RON file: {0:?}")]
     RonParseError(#[from] ron::error::SpannedError),
+    #[error("Missing configuration or tokens")]
+    MissingConfigurations,
 }
