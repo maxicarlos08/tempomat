@@ -1,3 +1,5 @@
+use std::string::FromUtf8Error;
+
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -22,4 +24,8 @@ pub enum TempomatError {
     RonParseError(#[from] ron::error::SpannedError),
     #[error("Missing configuration or tokens")]
     MissingConfigurations,
+    #[error("Could not get Jira issue ID, use -i <issue_key> to set it")]
+    CouldNotGetJiraIssueKey,
+    #[error("Invalid UTF-8 data")]
+    InvalidUtf(#[from] FromUtf8Error),
 }

@@ -1,6 +1,6 @@
 use crate::{
     error::TempomatError,
-    jira::{self, AtlassianToken},
+    jira::{self, AtlassianTokens},
     tempo::oauth::{actions as tempo_actions, TempoAccessTokens},
 };
 use chrono::{Duration, NaiveDateTime, Utc};
@@ -28,21 +28,21 @@ pub struct TempoAccessMetadata {
     pub tokens: TempoAccessTokens,
 }
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct APITokens {
     /// Jira only has one access token
-    pub jira: Option<AtlassianToken>,
+    pub jira: AtlassianTokens,
     /// OAuth tokens for tempo
-    pub tempo: Option<TempoAccessMetadata>,
+    pub tempo: TempoAccessMetadata,
 }
 
 impl APITokens {
     pub async fn initialize(config: &Config) -> Result<Self, TempomatError> {
         // Not using Result::ok() here since we want the process to fail if something went wrong
         println!("Getting Tempo tokens...");
-        let tempo = Some(tempo_actions::login(config).await?.into());
+        let tempo = tempo_actions::login(config).await?.into();
         println!("Getting Jira tokens...");
-        let jira = Some(jira::get_token()?);
+        let jira = jira::get_token()?;
 
         println!("{}", "Successfully got access tokens!".green());
 
@@ -51,14 +51,12 @@ impl APITokens {
 
     /// Refreshes tokens if necesarry, returns true if the token was refreshed
     pub async fn refresh_tokens(&mut self) -> Result<bool, TempomatError> {
-        let Some(ref tempo) = self.tempo else {Err(TempomatError::MissingTempoAccess)?};
-
-        if (Utc::now().naive_utc() - tempo.last_refresh)
-            > Duration::seconds(tempo.tokens.expires_in as i64)
+        if (Utc::now().naive_utc() - self.tempo.last_refresh)
+            > Duration::seconds(self.tempo.tokens.expires_in as i64)
         {
             debug!("Token expired, getting new tokens...");
-            let tokens = tempo_actions::refresh_token(&tempo.tokens).await?;
-            self.tempo = Some(tokens.into());
+            let tokens = tempo_actions::refresh_token(&self.tempo.tokens).await?;
+            self.tempo = tokens.into();
             Ok(true)
         } else {
             debug!("Tokens not expired, not doing anything");
@@ -90,12 +88,12 @@ pub trait Saveable: Serialize + DeserializeOwned {
         Ok(())
     }
 
-    fn try_read(root: &Path) -> Result<Self, TempomatError> {
+    fn try_read(root: &Path) -> Result<Option<Self>, TempomatError> {
         let path = Self::path(root);
-        let config = fs::read_to_string(path)?;
+        let Ok(config) = fs::read_to_string(path) else { return Ok(None) };
         let config = ron::from_str(&config)?;
 
-        Ok(config)
+        Ok(Some(config))
     }
 }
 

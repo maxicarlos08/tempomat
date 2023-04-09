@@ -5,6 +5,8 @@ use tempomat::{
     config::{APITokens, Config, Saveable},
     dirs,
     error::TempomatError,
+    git,
+    jira::api::JiraApi,
 };
 
 #[tokio::main]
@@ -24,8 +26,8 @@ async fn main() -> Result<(), TempomatError> {
         fs::create_dir_all(&config_root)?;
     }
 
-    let mut config = Config::try_read(&config_root).ok();
-    let mut tokens = APITokens::try_read(&config_root).ok();
+    let mut config = Config::try_read(&config_root)?;
+    let mut tokens = APITokens::try_read(&config_root)?;
 
     match args.command {
         CLISubcommand::Log {
@@ -39,7 +41,13 @@ async fn main() -> Result<(), TempomatError> {
             // Ensure tokens arent outdated
             tokens.refresh_tokens().await?;
 
-            todo!("Log time")
+            let Some(issue_key) = issue_id.or_else(|| git::get_current_branch_key().ok().flatten()) else {
+                Err(TempomatError::CouldNotGetJiraIssueKey)?
+            };
+
+            let jira_issue = JiraApi(&tokens.jira, &config).get_issue(&issue_key).await?;
+
+            println!("Creating worklog for issue: {:?}", jira_issue);
         }
         CLISubcommand::Login { atlassian_instance } => {
             let config = Config { atlassian_instance };

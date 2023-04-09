@@ -1,6 +1,8 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
+use crate::jira::types::JiraIssueKey;
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct TempomatCLI {
@@ -16,14 +18,14 @@ pub enum CLISubcommand {
     /// Create a new time log
     Log {
         /// Amount of time to log (XhYmZs)
-        #[arg(value_parser = parse_duration::parse_arg)]
-        time: usize,
+        #[arg(value_parser = parsers::parse_arg)]
+        time: Option<usize>,
         /// Message for the time log
         #[arg(short, long)]
         message: Option<String>,
         /// Jira issue ID to log to
-        #[arg(short, long)]
-        issue_id: Option<String>,
+        #[arg(short, long, value_parser = parsers::parse_issue_id)]
+        issue_id: Option<JiraIssueKey>,
     },
     /// Log in to Tempo and Jira
     Login {
@@ -33,12 +35,20 @@ pub enum CLISubcommand {
     },
 }
 
-mod parse_duration {
+mod parsers {
+    use crate::jira::{parse_issue_key, types::JiraIssueKey};
     use nom::{
         bytes::complete::{tag, take_while},
         combinator::map_res,
         IResult,
     };
+
+    pub fn parse_issue_id(id: &str) -> Result<JiraIssueKey, String> {
+        match parse_issue_key(id) {
+            Ok((_, key)) => Ok(key),
+            Err(err) => Err(err.to_string()),
+        }
+    }
 
     pub fn parse_arg(time: &str) -> Result<usize, String> {
         match parse_duration(time) {
