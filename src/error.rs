@@ -1,8 +1,7 @@
 use std::string::FromUtf8Error;
-
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Error)]
 pub enum TempomatError {
     #[error("HTTP error: {0:?}")]
     ReqwestErrror(#[from] reqwest::Error),
@@ -28,4 +27,14 @@ pub enum TempomatError {
     CouldNotGetJiraIssueKey,
     #[error("Invalid UTF-8 data")]
     InvalidUtf(#[from] FromUtf8Error),
+    #[error("Timer does not exist")]
+    TimerInvalid,
+    #[error("Tried to log negative time, did you change your timezone?")]
+    NegativeTime,
+}
+
+impl std::fmt::Debug for TempomatError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <Self as std::fmt::Display>::fmt(self, f)
+    }
 }

@@ -39,7 +39,7 @@ pub enum CLISubcommand {
         issue: Option<JiraIssueKey>,
     },
     /// End a timer
-    End {
+    Stop {
         /// Clear the timer without submitting it
         #[arg(short, long)]
         no_submit: bool,
