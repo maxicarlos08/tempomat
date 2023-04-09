@@ -9,4 +9,5 @@
  - [ ] Dont use oauth maybe?
  - [ ] Shell completions
  - [ ] Profiles (multiple "accounts" or "sessions")
- - [ ] Start/Stop trackers
+ - [x] Start/Stop trackers
+ - [ ] Update readme
