@@ -19,18 +19,36 @@ pub enum CLISubcommand {
         /// Amount of time to log (XhYmZs)
         #[arg(value_parser = parsers::parse_arg)]
         time: (usize, String),
-        /// Message for the time log
+        /// Description of the time log
         #[arg(short, long)]
-        message: Option<String>,
+        description: Option<String>,
         /// Jira issue ID to log to
         #[arg(short, long, value_parser = parsers::parse_issue_id)]
-        issue_id: Option<JiraIssueKey>,
+        issue: Option<JiraIssueKey>,
     },
     /// Log in to Tempo and Jira
     Login {
         /// Name of the atlassian instance you have tempo installed to
         #[arg(long)]
         atlassian_instance: String,
+    },
+    /// Start a new timer
+    Start {
+        /// Issue to start a timer for
+        #[arg(short, long, value_parser = parsers::parse_issue_id)]
+        issue: Option<JiraIssueKey>,
+    },
+    /// End a timer
+    End {
+        /// Clear the timer without submitting it
+        #[arg(short, long)]
+        no_submit: bool,
+        /// Description of the time log
+        #[arg(short, long)]
+        description: Option<String>,
+        /// Issue of the timer
+        #[arg(short, long, value_parser = parsers::parse_issue_id)]
+        issue: Option<JiraIssueKey>,
     },
 }
 

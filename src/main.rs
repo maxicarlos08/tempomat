@@ -36,8 +36,8 @@ async fn main() -> Result<(), TempomatError> {
     match args.command {
         CLISubcommand::Log {
             time,
-            message,
-            issue_id,
+            description,
+            issue,
         } => {
             let (Some(config), Some(mut tokens)) = (config.take(), tokens.take()) else {
                 Err(TempomatError::MissingConfigurations)?
@@ -82,6 +82,12 @@ async fn main() -> Result<(), TempomatError> {
             config.save(&config_root)?;
             access_tokens.save(&config_root)?;
         }
+        CLISubcommand::Start { issue } => todo!(),
+        CLISubcommand::End {
+            no_submit,
+            description,
+            issue,
+        } => todo!(),
     }
 
     Ok(())
