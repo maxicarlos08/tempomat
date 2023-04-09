@@ -4,8 +4,8 @@
 	 - [x] Tempo Authentication
 	 - [x] Jira access token
 	 - [x] Save it!
- - [ ] Tempo and Jira API
- - [ ] First time log
+ - [x] Tempo and Jira API
+ - [x] First time log
  - [ ] Dont use oauth maybe?
  - [ ] Shell completions
  - [ ] Profiles (multiple "accounts" or "sessions")
