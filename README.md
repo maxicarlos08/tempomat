@@ -35,4 +35,4 @@ tempomat log -i PROJ-5 30m # Log 30 minutes to the issue PROJ-5
 
 ## TODO
 
-This tool is not yet fully complete, watch the progress here: [TODO.md].
+This tool is not yet fully complete, watch the progress here: [TODO.md](TODO.md)
