@@ -58,7 +58,7 @@ async fn main() -> Result<(), TempomatError> {
             let jira_issue = jira_api.get_issue(&issue_key).await?;
             let me = jira_api.get_me().await?;
 
-            let start = chrono::Local::now().naive_utc() - Duration::seconds(time.0 as i64);
+            let start = chrono::Local::now().naive_local() - Duration::seconds(time.0 as i64);
 
             debug!("Submitting the worklog");
             let result = TempoApi(&tokens.tempo.tokens)
