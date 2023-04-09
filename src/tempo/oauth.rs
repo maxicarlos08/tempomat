@@ -104,8 +104,8 @@ impl TempoAccessTokens {
 
 pub mod actions {
     use super::{
-        generate_access_link, server::OAuthServer, GetAccessTokens, TempoAccessTokens,
-        OAUTH_REDIRECT_URI, OAUTH_SERVER_PORT,
+        generate_access_link, server, GetAccessTokens, TempoAccessTokens, OAUTH_REDIRECT_URI,
+        OAUTH_SERVER_PORT,
     };
     use crate::{config::Config, error::TempomatError};
     use tracing::instrument;
@@ -114,8 +114,8 @@ pub mod actions {
     #[instrument(level = "trace")]
     pub async fn login(config: &Config) -> Result<TempoAccessTokens, TempomatError> {
         // Start a server in the background
-        let server = OAuthServer::start(([127, 0, 0, 1], OAUTH_SERVER_PORT).into()).await;
-        let link = generate_access_link(&config.atlassian_instance, &OAUTH_REDIRECT_URI);
+        let server = server::get_code(([127, 0, 0, 1], OAUTH_SERVER_PORT).into());
+        let link = generate_access_link(&config.atlassian_instance, OAUTH_REDIRECT_URI);
         // Start the oauth process by opening the initial link in the browser
         let _ = open::that(&link);
         println!("Click \"Accept\" and then \"Onwards\" in your browser tab, if nothing happened click this link: {link}");
@@ -144,84 +144,64 @@ pub mod server {
         Router, Server,
     };
     use serde::Deserialize;
-    use std::{future::Future, net::SocketAddr, sync::Arc};
+    use std::{net::SocketAddr, sync::Arc};
     use tokio::{
         sync::{oneshot, Mutex, Notify},
-        task::{self, JoinHandle},
+        task,
     };
     use tracing::{debug, error, instrument};
 
-    pub struct OAuthServer {
-        handle: JoinHandle<String>,
-    }
+    #[instrument(level = "trace", skip_all)]
+    pub async fn get_code(host: SocketAddr) -> Result<String, TempomatError> {
+        type ServerState = (Arc<Notify>, Arc<Mutex<Option<oneshot::Sender<String>>>>);
+        let handle = task::spawn(async move {
+            let (tx, rx) = oneshot::channel();
+            let notify_done = Arc::new(Notify::new());
 
-    impl OAuthServer {
-        #[instrument(level = "trace", skip_all)]
-        pub async fn start(host: SocketAddr) -> Self {
-            let handle = task::spawn(async move {
-                let (tx, rx) = oneshot::channel();
-                let notify_done = Arc::new(Notify::new());
+            debug!("Starting OAuth web serverr...");
+            let server = Server::bind(&host).serve(
+                Router::new()
+                    .route("/cb", get(handler))
+                    .with_state((notify_done.clone(), Arc::new(Mutex::new(Some(tx)))))
+                    .into_make_service(),
+            );
 
-                debug!("Starting OAuth web serverr...");
-                let server = Server::bind(&host).serve(
-                    Router::new()
-                        .route("/cb", get(handler))
-                        .with_state((notify_done.clone(), Arc::new(Mutex::new(Some(tx)))))
-                        .into_make_service(),
-                );
+            #[derive(Deserialize)]
+            struct CBQuery {
+                code: String,
+            }
 
-                #[derive(Deserialize)]
-                struct CBQuery {
-                    code: String,
+            #[instrument(level = "trace")]
+            async fn handler(
+                State((notify, send)): State<ServerState>,
+                Query(CBQuery { code }): Query<CBQuery>,
+            ) -> &'static str {
+                if let Some(send) = send.lock_owned().await.take() {
+                    debug!("Got oauth code, sendnig server shutdown signals");
+                    let _ = send.send(code);
+                    notify.notify_one();
+
+                    "Success! You can now close this tab"
+                } else {
+                    error!("Failed to get Notifier");
+                    "Something went terribly wrong, leave your house immediatly"
                 }
+            }
 
-                #[instrument(level = "trace")]
-                async fn handler(
-                    State((notify, send)): State<(
-                        Arc<Notify>,
-                        Arc<Mutex<Option<oneshot::Sender<String>>>>,
-                    )>,
-                    Query(CBQuery { code }): Query<CBQuery>,
-                ) -> &'static str {
-                    if let Some(send) = send.lock_owned().await.take() {
-                        debug!("Got oauth code, sendnig server shutdown signals");
-                        let _ = send.send(code);
-                        notify.notify_one();
+            debug!("Waiting for the web server to get a response...");
 
-                        "Success! You can now close this tab"
-                    } else {
-                        error!("Failed to get Notifier");
-                        "Something went terribly wrong, leave your house immediatly"
-                    }
-                }
+            let _graceful = server
+                .with_graceful_shutdown(async {
+                    notify_done.notified().await;
+                    debug!("Web server got shutdown signal, shutting down...");
+                })
+                .await;
 
-                debug!("Waiting for the web server to get a response...");
+            debug!("Web server successfully shutted down");
 
-                let _graceful = server
-                    .with_graceful_shutdown(async {
-                        notify_done.notified().await;
-                        debug!("Web server got shutdown signal, shutting down...");
-                    })
-                    .await;
+            rx.await.unwrap()
+        });
 
-                debug!("Web server successfully shutted down");
-
-                rx.await.unwrap()
-            });
-
-            Self { handle }
-        }
-    }
-
-    impl Future for OAuthServer {
-        type Output = Result<String, TempomatError>;
-
-        fn poll(
-            mut self: std::pin::Pin<&mut Self>,
-            cx: &mut std::task::Context<'_>,
-        ) -> std::task::Poll<Self::Output> {
-            <JoinHandle<String> as Future>::poll(std::pin::Pin::new(&mut self.handle), cx)
-                .map_err(Into::into)
-        }
+        Ok(handle.await?)
     }
 }

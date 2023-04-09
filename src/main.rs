@@ -1,4 +1,6 @@
+use chrono::Duration;
 use clap::Parser;
+use colored::Colorize;
 use std::{env, fs, path::PathBuf};
 use tempomat::{
     args::{CLISubcommand, TempomatCLI},
@@ -7,7 +9,9 @@ use tempomat::{
     error::TempomatError,
     git,
     jira::api::JiraApi,
+    tempo::api::TempoApi,
 };
+use tracing::debug;
 
 #[tokio::main]
 async fn main() -> Result<(), TempomatError> {
@@ -38,16 +42,38 @@ async fn main() -> Result<(), TempomatError> {
             let (Some(config), Some(mut tokens)) = (config.take(), tokens.take()) else {
                 Err(TempomatError::MissingConfigurations)?
             };
+
+            debug!("Ensuring all tokens are up to date...");
             // Ensure tokens arent outdated
             tokens.refresh_tokens().await?;
 
+            debug!("Parsing issue key");
             let Some(issue_key) = issue_id.or_else(|| git::get_current_branch_key().ok().flatten()) else {
                 Err(TempomatError::CouldNotGetJiraIssueKey)?
             };
 
-            let jira_issue = JiraApi(&tokens.jira, &config).get_issue(&issue_key).await?;
+            let jira_api = JiraApi(&tokens.jira, &config);
 
-            println!("Creating worklog for issue: {:?}", jira_issue);
+            debug!("Getting issue key and user information...");
+            let jira_issue = jira_api.get_issue(&issue_key).await?;
+            let me = jira_api.get_me().await?;
+
+            let start = chrono::Utc::now().naive_utc() - Duration::seconds(time.0 as i64);
+
+            debug!("Submitting the worklog");
+            let result = TempoApi(&tokens.tempo.tokens)
+                .create_worklog(&me, &jira_issue.id, message, time.0, start)
+                .await?;
+
+            if result {
+                println!(
+                    "Successfully logged {} for issue '{}'",
+                    time.1.green(),
+                    jira_issue.fields.summary.bright_blue()
+                );
+            } else {
+                println!("{}", "Failed to create worklog, check logs".red());
+            }
         }
         CLISubcommand::Login { atlassian_instance } => {
             let config = Config { atlassian_instance };

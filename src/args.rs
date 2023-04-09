@@ -1,7 +1,6 @@
+use crate::jira::types::JiraIssueKey;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
-
-use crate::jira::types::JiraIssueKey;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -19,7 +18,7 @@ pub enum CLISubcommand {
     Log {
         /// Amount of time to log (XhYmZs)
         #[arg(value_parser = parsers::parse_arg)]
-        time: Option<usize>,
+        time: (usize, String),
         /// Message for the time log
         #[arg(short, long)]
         message: Option<String>,
@@ -50,9 +49,10 @@ mod parsers {
         }
     }
 
-    pub fn parse_arg(time: &str) -> Result<usize, String> {
+    pub fn parse_arg(time: &str) -> Result<(usize, String), String> {
+        let original = time.to_owned();
         match parse_duration(time) {
-            Ok(("", duration)) => Ok(duration),
+            Ok(("", duration)) => Ok((duration, original)),
             Ok((remaining, _)) => Err(format!(
                 "Could not parse this remaining duration fragment: {remaining}"
             )),
@@ -69,7 +69,7 @@ mod parsers {
     }
 
     fn is_digit(c: char) -> bool {
-        c.is_digit(10)
+        c.is_ascii_digit()
     }
 
     // TODO: Get rid of repetition
@@ -79,7 +79,7 @@ mod parsers {
         end_tag: &'static str,
         multiplier: usize,
     ) -> IResult<&'a str, usize> {
-        let mut duration = map_res(take_while(is_digit), |i| usize::from_str_radix(i, 10))(i)?;
+        let mut duration = map_res(take_while(is_digit), |i: &str| i.parse::<usize>())(i)?;
         (duration.0, _) = tag(end_tag)(duration.0)?;
 
         Ok((duration.0, duration.1 * multiplier))
@@ -91,9 +91,9 @@ mod parsers {
 
         #[test]
         fn test_correct_times() {
-            assert_eq!(parse_arg("1m"), Ok(60));
-            assert_eq!(parse_arg("6h7s"), Ok(21607));
-            assert_eq!(parse_arg("1h30m"), Ok(5400));
+            assert_eq!(parse_arg("1m").unwrap().0, 60);
+            assert_eq!(parse_arg("6h7s").unwrap().0, 21607);
+            assert_eq!(parse_arg("1h30m").unwrap().0, 5400);
         }
 
         #[test]

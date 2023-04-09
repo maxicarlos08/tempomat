@@ -50,8 +50,8 @@ pub fn parse_issue_key(input: &str) -> IResult<&str, JiraIssueKey> {
     let (input, value) = tuple((
         take_while1(|c: char| c.is_uppercase()),
         tag("-"),
-        map_res(take_while1(|c: char| c.is_digit(10)), |n| {
-            usize::from_str_radix(n, 10)
+        map_res(take_while1(|c: char| c.is_ascii_digit()), |n: &str| {
+            n.parse::<usize>()
         }),
     ))(input)?;
 
@@ -92,7 +92,7 @@ mod test {
                 board: "DV".to_string(),
                 id: 5726
             }
-        )
+        );
     }
 
     #[test]
