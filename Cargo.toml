@@ -4,10 +4,17 @@ description = "Minimal Tempo+Jira time logging CLI"
 authors = ["Maxicarlos08 <maxicarlos08@gmail.com>"]
 license = "MIT"
 repository = "https://github.com/maxicarlos08/tempomat"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+# Optimized for size
+[profile.release]
+strip = true
+opt-level = "z"
+codegen-units = 1
+panic = "abort"
 
 [dependencies]
 axum = { version = "0.6.12", features = ["macros"] }
