@@ -1,7 +1,9 @@
 [package]
 name = "tempomat"
-description = "Minimal Tempo+Jira time tracking CLI"
+description = "Minimal Tempo+Jira time logging CLI"
 authors = ["Maxicarlos08 <maxicarlos08@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/maxicarlos08/tempomat"
 version = "0.1.0"
 edition = "2021"
 
