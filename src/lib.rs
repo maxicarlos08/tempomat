@@ -6,6 +6,7 @@ pub mod error;
 pub mod git;
 pub mod jira;
 pub mod tempo;
+pub mod time;
 pub mod timers;
 
 pub fn dirs() -> Result<ProjectDirs, error::TempomatError> {

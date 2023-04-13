@@ -13,7 +13,7 @@ An AUR package might come in the future.
 First you must get all the required access tokens:
 
 ```sh
-tempomat login --atlassian-instance <you_atlassian_instance>
+tempomat login --atlassian-instance <your_atlassian_instance>
 ```
 
 #### Required accesses:
@@ -31,6 +31,9 @@ Examples:
 tempomat log 1h # Logs 1 hour to the current issue
 tempomat log -m"Implement Bar" 30s # Logs 30 seconds to the current issue with a description
 tempomat log -i PROJ-5 30m # Log 30 minutes to the issue PROJ-5
+tempomat start # Start a timer for the current issue, you can also use -i <issue> here
+tempomat list -i PROJ-5 # Show current timer for issue PROJ-5
+tempomat stop -n # Cancel the timer for the current issue, don't pass -n to submit it (-i supported)
 ```
 
 ## TODO

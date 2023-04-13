@@ -50,6 +50,15 @@ pub enum CLISubcommand {
         #[arg(short, long, value_parser = parsers::parse_issue_id)]
         issue: Option<JiraIssueKey>,
     },
+    /// List currently running timers
+    List {
+        /// Show all timers
+        #[arg(short, long)]
+        all: bool,
+        /// List only from this specific issue
+        #[arg(short, long, value_parser = parsers::parse_issue_id)]
+        issue: Option<JiraIssueKey>,
+    },
 }
 
 mod parsers {
